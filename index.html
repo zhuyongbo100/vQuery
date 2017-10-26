@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>弹性势能动画</title>
+    <style>
+        html {
+            margin: 0;
+            padding: 0;
+            background: #bfa;
+        }
+
+        #box {
+            position: absolute;
+            left: 100px;
+            top: 100px;
+            width: 115px;
+            height: 150px;
+            cursor: move;
+        }
+
+        img {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script src="js/vQuery.js"></script>
+</head>
+<body>
+<div id="box"><img src="images/2.jpg"/></div>
+</body>
+<script type="text/javascript" charset="utf-8">
+    $("#box").on("mousedown", down);
+
+    function down(e) {
+        var _this = this;
+        this["diffX"] = e.clientX - $(this).offset().left;
+        this["diffY"] = e.clientY - $(this).offset().top;
+        e.preventDefault();//阻止拖动时出现阴影
+        if (this.setCapture) {
+            this.setCapture();
+            $(this).on("mousemove", move);
+            $(this).on("mouseup", up);
+        } else {//兼容谷歌浏览器,鼠标移动过快失去焦点
+            this["google_move"] = function (e) {//解绑方便
+                move.call(_this, e);
+            }
+            this["google_up"] = function (e) {
+                up.call(_this, e);
+            }
+            $(document).on("mousemove", _this.google_move);
+            $(document).on("mouseup", _this.google_up);
+        }
+        window.clearInterval(this.flyTimer);
+        window.clearInterval(this.dropTimer);
+    }
+
+    function move(e) {
+        var curL = e.clientX - this["diffX"];
+        var curT = e.clientY - this["diffY"];
+        var minL = 0,
+            minT = 0,
+            maxL = $(window).win("clientWidth") - $(this).get(0).offsetWidth,
+            maxT = $(window).win("clientHeight") - $(this).get(0).offsetHeight;
+        curL = curL <= minL ? minL : (curL >= maxL ? maxL : curL);
+        curT = curT <= minT ? minT : (curT >= maxT ? maxT : curT);
+        this.style.left = curL + "px";
+        this.style.top = curT + "px";
+        if (!this.preL) {
+            this.preL = $(this).offset().left;
+            this.preT = $(this).offset().top;
+        } else {
+            this.flySpeed = $(this).offset().left - this.preL;//获取鼠标松开一瞬间的速度
+            this.flyDrop = $(this).offset().top - this.preT;
+            this.preL = $(this).offset().left;
+            this.preT = $(this).offset().top;
+        }
+    }
+
+    function up(e) {
+        if (this.releaseCapture) {
+            this.releaseCapture();
+            $(this).off("mousemove", move);
+            $(this).off("mouseup", up);
+        } else {
+            $(document).off("mousemove", this.google_move);
+            $(document).off("mouseup", this.google_up);
+        }
+        fly.call(this, e);
+        drop.call(this, e);
+    }
+
+    function fly(e) {
+        var _this = this;
+        var minL = 0, maxL = $(window).win("clientWidth") - $(_this).get(0).offsetWidth;
+        _this.flyTimer = window.setInterval(function () {
+            if (Math.abs(_this.flySpeed) < 0.5) {//速度小时停止动画
+                window.clearInterval(_this.flyTimer);
+                return;
+            }
+            _this.flySpeed *= 0.98;
+            var curL = $(_this).css("left") + _this.flySpeed;
+            if (curL >= maxL) {
+                _this.style.left = maxL + "px";
+                _this.flySpeed *= -1;
+            } else if (curL <= minL) {
+                _this.style.left = minL + "px";
+                _this.flySpeed *= -1;
+            } else {
+                _this.style.left = curL + "px";
+            }
+
+        }, 10);
+    }
+
+    function drop(e) {
+        var _this = this;
+        _this.dropFlag = 0;
+        var minT = 0, maxT = $(window).win("clientHeight") - $(_this).get(0).offsetHeight;
+        _this.dropTimer = window.setInterval(function () {
+            _this.dropSpeed = !_this.dropSpeed ? 1 : _this.dropSpeed + 2;//加速度
+            _this.dropSpeed *= 0.98;//阻力因素，衰减
+            var curT = $(_this).css("top") + _this.dropSpeed;
+            if (curT >= maxT) {
+                _this.style.top = maxT + "px";
+                _this.dropSpeed *= -1;
+                _this.dropFlag++;//连续两次处于底部状态停止动画
+            } else {
+                _this.style.top = curT + "px";
+                _this.dropFlag = 0;
+            }
+            if (_this.dropFlag > 1) {
+                window.clearInterval(_this.dropTimer);
+            }
+        }, 10)
+    }
+</script>
+</html>
